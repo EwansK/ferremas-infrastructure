@@ -36,7 +36,7 @@ fi
 echo "📁 Setting up project directory..."
 cd /home/ec2-user
 if [ ! -d "ferremas-infrastructure" ]; then
-    git clone https://github.com/YOUR_USERNAME/ferremas-infrastructure.git
+    git clone https://github.com/EwansK/ferremas-infrastructure.git
     cd ferremas-infrastructure
 else
     cd ferremas-infrastructure
