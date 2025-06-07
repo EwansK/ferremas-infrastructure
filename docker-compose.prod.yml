@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  product-service:
+    image: ${DOCKER_HUB_USERNAME}/ferremas-product-service:latest
+    container_name: product-service
+    ports:
+      - "4001:4001"
+    environment:
+      - PGHOST=${PGHOST}
+      - PGUSER=${PGUSER}
+      - PGPASSWORD=${PGPASSWORD}
+      - PGDATABASE=${PGDATABASE}
+      - PGPORT=${PGPORT}
+      - PORT=4001
+    restart: always
+    networks:
+      - ferremas-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  api-gateway:
+    image: ${DOCKER_HUB_USERNAME}/ferremas-api-gateway:latest
+    container_name: api-gateway
+    ports:
+      - "4000:4000"
+    environment:
+      - PRODUCT_SERVICE_URL=http://product-service:4001
+    depends_on:
+      product-service:
+        condition: service_healthy
+    restart: always
+    networks:
+      - ferremas-network
+
+  frontend:
+    image: ${DOCKER_HUB_USERNAME}/ferremas-frontend:latest
+    container_name: ecommerce-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+    depends_on:
+      - api-gateway
+    restart: always
+    networks:
+      - ferremas-network
+
+networks:
+  ferremas-network:
+    driver: bridge
