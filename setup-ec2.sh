@@ -1,25 +1,22 @@
 #!/bin/bash
 
-# EC2 Setup Script for Ferremas Infrastructure
+# EC2 Setup Script for Ferremas Infrastructure (Amazon Linux)
 # Run this script on your EC2 instance
 
 set -e
 
-echo "🚀 Setting up Ferremas infrastructure on EC2..."
+echo "🚀 Setting up Ferremas infrastructure on Amazon Linux EC2..."
 
 # Update system
-sudo apt update -y
-sudo apt upgrade -y
+sudo yum update -y
 
 # Install Docker
 if ! command -v docker &> /dev/null; then
     echo "📦 Installing Docker..."
-    sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    sudo apt update -y
-    sudo apt install -y docker-ce docker-ce-cli containerd.io
-    sudo usermod -aG docker ubuntu
+    sudo yum install -y docker
+    sudo systemctl start docker
+    sudo systemctl enable docker
+    sudo usermod -aG docker ec2-user
 fi
 
 # Install Docker Compose
@@ -29,15 +26,15 @@ if ! command -v docker-compose &> /dev/null; then
     sudo chmod +x /usr/local/bin/docker-compose
 fi
 
-# Install Git
+# Install Git (usually pre-installed on Amazon Linux)
 if ! command -v git &> /dev/null; then
     echo "📦 Installing Git..."
-    sudo apt install -y git
+    sudo yum install -y git
 fi
 
 # Create project directory
 echo "📁 Setting up project directory..."
-cd /home/ubuntu
+cd /home/ec2-user
 if [ ! -d "ferremas-infrastructure" ]; then
     git clone https://github.com/YOUR_USERNAME/ferremas-infrastructure.git
     cd ferremas-infrastructure
@@ -71,10 +68,10 @@ After=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/home/ubuntu/ferremas-infrastructure
+WorkingDirectory=/home/ec2-user/ferremas-infrastructure
 ExecStart=/usr/local/bin/docker-compose -f docker-compose.prod.yml up -d
 ExecStop=/usr/local/bin/docker-compose -f docker-compose.prod.yml down
-User=ubuntu
+User=ec2-user
 
 [Install]
 WantedBy=multi-user.target
@@ -86,7 +83,7 @@ sudo systemctl enable ferremas.service
 echo "✅ EC2 setup complete!"
 echo ""
 echo "Next steps:"
-echo "1. Edit /home/ubuntu/ferremas-infrastructure/.env with your database credentials"
+echo "1. Edit /home/ec2-user/ferremas-infrastructure/.env with your database credentials"
 echo "2. Run: sudo systemctl start ferremas.service"
 echo "3. Check status: sudo systemctl status ferremas.service"
 echo "4. View logs: docker-compose -f docker-compose.prod.yml logs -f"
