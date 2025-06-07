@@ -1,0 +1,41 @@
+name: Deploy Infrastructure
+
+on:
+  repository_dispatch:
+    types: [api-gateway-updated, product-service-updated, frontend-updated, manual-deploy]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.AWS_EC2_HOST }}
+        username: ${{ secrets.AWS_EC2_USER }}
+        key: ${{ secrets.AWS_EC2_SSH_KEY }}
+        script: |
+          cd /home/ec2-user/ferremas-infrastructure
+          git pull origin main
+          
+          # Update environment variables
+          echo "DOCKER_HUB_USERNAME=${{ secrets.DOCKER_HUB_USERNAME }}" > .env
+          echo "PGHOST=${{ secrets.PGHOST }}" >> .env
+          echo "PGUSER=${{ secrets.PGUSER }}" >> .env
+          echo "PGPASSWORD=${{ secrets.PGPASSWORD }}" >> .env
+          echo "PGDATABASE=${{ secrets.PGDATABASE }}" >> .env
+          echo "PGPORT=${{ secrets.PGPORT }}" >> .env
+          echo "NEXT_PUBLIC_API_URL=http://${{ secrets.AWS_EC2_HOST }}:4000" >> .env
+          
+          # Deploy with latest images
+          docker-compose -f docker-compose.prod.yml down
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml up -d
+          
+          # Cleanup
+          docker system prune -f
